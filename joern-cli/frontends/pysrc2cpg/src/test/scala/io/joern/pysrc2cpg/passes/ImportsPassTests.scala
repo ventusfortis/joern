@@ -6,7 +6,7 @@ import io.shiftleft.semanticcpg.language.*
 class ImportsPassTests extends PySrc2CpgFixture(withOssDataflow = false) {
 
   "For a simple import statement, there" should {
-    lazy val cpg = code("import foo")
+    lazy val cpg = code("import foo", "app.py")
     "be a create a call to `import`" in {
       val List(callToImport) = cpg.call("import").l
       callToImport.code shouldBe "import(, foo)"
@@ -24,6 +24,12 @@ class ImportsPassTests extends PySrc2CpgFixture(withOssDataflow = false) {
       val List(importNode) = cpg.imports.l
       importNode.importedEntity shouldBe Some("foo")
       importNode.importedAs shouldBe Some("foo")
+    }
+
+    "populate import location with file and line" in {
+      val List(loc) = cpg.imports.location.l
+      loc.filename shouldBe "app.py"
+      loc.lineNumber shouldBe Some(1)
     }
 
   }

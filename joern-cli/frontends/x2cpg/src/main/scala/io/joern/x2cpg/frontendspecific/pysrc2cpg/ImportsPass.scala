@@ -1,6 +1,8 @@
 package io.joern.x2cpg.frontendspecific.pysrc2cpg
 
+import io.joern.x2cpg.Imports.createImportNodeAndLink
 import io.joern.x2cpg.passes.frontend.XImportsPass
+import io.shiftleft.codepropertygraph.generated.EdgeTypes
 import io.shiftleft.codepropertygraph.generated.Cpg
 import io.shiftleft.codepropertygraph.generated.nodes.*
 import io.shiftleft.semanticcpg.language.*
@@ -20,6 +22,24 @@ class ImportsPass(cpg: Cpg) extends XImportsPass(cpg) {
       case List("", what, _)    => what
       case List(where, what, _) => s"${resolve(where, what, call)}"
       case _                    => ""
+    }
+  }
+
+  override def runOnPart(diffGraph: DiffGraphBuilder, part: (Call, Assignment)): Unit = {
+    val (call, assignment) = part
+    val importedEntity     = importedEntityFromCall(call)
+    val importedAs         = assignment.target.code
+    val importNode         = createImportNodeAndLink(importedEntity, importedAs, Some(call), diffGraph)
+
+    // Enrich import node with source location and attach it to the enclosing method for location/file resolution.
+    importNode
+      .code(call.code)
+      .order(call.order)
+      .lineNumber(call.lineNumber)
+      .columnNumber(call.columnNumber)
+
+    Option(call.method).foreach { m =>
+      diffGraph.addEdge(m, importNode, EdgeTypes.AST)
     }
   }
 
